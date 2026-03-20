@@ -559,7 +559,7 @@ local function refresh(value: boolean?)
 					if cache.Percentage and not completed.Value then
 						percent = math.floor(100 * Ichor.Size.X / IchorFull.Size.X)
 						per = percent .. "%"
-						local str = buildMessage(gen):gsub("{p}", 100 / (IchorFull.Size.X/Ichor.Size.X) < 1 and "0%%" or per)
+						local str = buildMessage(gen):gsub("{p}", 100 / (IchorFull.Size.X/Ichor.Size.X) < 1 and "%%" or per)
 						highlight(gen, Colors.RED, str)
 					else
 						local str = buildMessage(gen):gsub("{p}", "incomplete")
