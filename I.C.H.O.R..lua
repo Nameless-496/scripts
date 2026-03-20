@@ -34,7 +34,7 @@ local cache = {
 	Items = false,
 	Monsters = false,
 	Light = false,
-	WayPoints = false,
+	Waypoints = false,
 	
 	PShow = false,
 	PName = false,
@@ -689,10 +689,10 @@ local function refresh(value: boolean?)
 		end
 		
 		do
-			local folder = CurrentRoom:FindFirstChild("WayPoints", true)
+			local folder = CurrentRoom:FindFirstChild("Waypoints", true)
 			for _, waypoint in folder:GetChildren() do
 				if not waypoint:IsA("BasePart") then continue end
-				waypoint.Transparency = cache.WayPoints and 0 or 1
+				waypoint.Transparency = cache.Waypoints and 0 or 1
 			end
 		end
 		
@@ -814,7 +814,7 @@ do --> Initialize
 	createPage("Monsters", {
 		["Monsters"] =	{ index = 1, label = "Show Monsters"		},
 		["Light"] =		{ index = 2, label = "Light on Blackout"	},
-		["WayPoints"] =	{ index = 3, label = "Show WayPoints"		},
+		["Waypoints"] =	{ index = 3, label = "Show Waypoints"		},
 	})
 	
 	createPage("Players", {
