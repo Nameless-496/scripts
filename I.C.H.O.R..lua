@@ -303,7 +303,7 @@ end
 local function highlight(parent: Instance, color: Color3, text: string, stroke: Color3?, twisted: boolean?)
 	local stroke = stroke or Colors.BLACK
 	local function addBillboard(p: Instance, offset: Vector3?)
-		local BillboardGui: BillboardGui =	createInstance("BillboardGui", p, { Adornee = p, AlwaysOnTop = true, Name = "I.C.H.O.R. | BillboardGui", Size = UDim2.fromScale(5, 1), StudsOffsetWorldSpace = offset or Vector3.zero, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ClipsDescendants = true })
+		local BillboardGui: BillboardGui =	createInstance("BillboardGui", p, { Adornee = p, AlwaysOnTop = true, Name = "I.C.H.O.R. | BillboardGui", Size = UDim2.fromScale(5, 2.5), StudsOffsetWorldSpace = offset or Vector3.zero, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ClipsDescendants = true })
 		local TextLabel: TextLabel =		createInstance("TextLabel", BillboardGui, { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Font = Enum.Font.RobotoMono, Text = text, TextColor3 = color, TextScaled = true, TextStrokeColor3 = stroke, TextStrokeTransparency = 0 })
 		BillboardGui:AddTag(cache.TAG)
 	end
