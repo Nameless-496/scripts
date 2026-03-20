@@ -24,14 +24,6 @@ local PickedCharacters = Info.PickedCharacters
 local player = Players.LocalPlayer
 local CoreGui = player:WaitForChild("PlayerGui")
 local character = player.Character or player.CharacterAdded:Wait()
-local playerStats = character:FindFirstChild("Stats") :: Instance
-
-local RunSpeed = playerStats:FindFirstChild("RunSpeed") :: NumberValue
-local RunSpeedMod = playerStats:FindFirstChild("RunSpeedModifier") :: NumberValue
-local WalkSpeed = playerStats:FindFirstChild("WalkSpeed") :: NumberValue
-local WalkSpeedMod = playerStats:FindFirstChild("SpeedModifier") :: NumberValue
-local OldSpeed = WalkSpeed.Value
-local OldRun = RunSpeed.Value
 
 local c = {}
 local cache = {
@@ -50,15 +42,10 @@ local cache = {
 	PHearts = false,
 	PItems = false,
 	PLight = false,
-	PSpeed = 15,
-	PSpeedMod = 1,
-	PRun = 25,
-	PRunMod = 1,
 	
 	TAG = "I.C.H.O.R._HIGHLIGHT_TAG",
 	TotalPages = 0,
 	
-	Running = false,
 	CanRefresh = true,
 	Toggled = true,
 	Collapsed = false,
@@ -765,7 +752,7 @@ local function refresh(value: boolean?)
 	setCanRefresh(true)
 end
 
-local function createPage(title: string, buttons_data: { [string]: { label: string, index: number, box: boolean? }})
+local function createPage(title: string, buttons_data: { [string]: { label: string, index: number }})
 	cache.TotalPages += 1
 	local newPage: ScrollingFrame =	Copy(tempPage, contentPage, { Name = title })
 	local newButton: TextButton =	createInstance("TextButton", pageButtons, { BackgroundColor3 = Colors.Tertiary, BorderSizePixel = 0, Name = title, Size = UDim2.new(0, 75, 1), FontFace = cache.DEFAULT_FONT, Text = title, TextSize = 14, TextColor3 = Colors.WHITE })
@@ -793,70 +780,17 @@ local function createPage(title: string, buttons_data: { [string]: { label: stri
 		local page_buttonpadding: UIPadding =	Copy(titlePadding, page_buttonframe, { PaddingRight = UDim.new(0, 5) })
 		local page_buttonlabel: TextLabel =		createInstance("TextLabel", page_buttonframe, { BackgroundTransparency = 1, Size = UDim2.fromScale(0.75, 1), FontFace = Font.fromName("Montserrat"), Text = data.label, TextColor3 = Colors.WHITE, TextSize = 21, TextTruncate = Enum.TextTruncate.SplitWord, TextXAlignment = Enum.TextXAlignment.Left })
 		
-		if not data.box then
-			local page_buttonhitbox: TextButton = createInstance("TextButton", page_buttonframe, { AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = Colors.Tertiary, BorderSizePixel = 0, Name = "Button", Position = UDim2.fromScale(1, 0.5), Size = UDim2.fromScale(0.25, 1), FontFace = cache.DEFAULT_FONT, Text = "OFF", TextColor3 = Colors.WHITE, TextScaled = true })
-			corners({page_buttonhitbox}, 4)
-			
-			if cache[name] == nil then continue end
-			c[page_buttonhitbox] = name
-			
-			page_buttonhitbox.Activated:Connect(function()
-				if not cache.CanRefresh then return end
-				cache[name] = not cache[name]
-				refresh()
-			end)
-		else
-			local iswalk = name == "PSpeed"
-			local page_boxvalue: TextBox = createInstance("TextBox", page_buttonframe, { AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = Color3.fromRGB(77, 107, 141), BorderSizePixel = 0, Name = "Value", Position = UDim2.fromScale(1, 0.5), Size = UDim2.fromScale(0.25, 1), FontFace = cache.DEFAULT_FONT, PlaceholderText = (iswalk and WalkSpeed or RunSpeed).Value, Text = (name == "PSpeed" and WalkSpeed or RunSpeed).Value, TextColor3 = Colors.WHITE, TextScaled = true })
-			createInstance("UIStroke", page_boxvalue, { ApplyStrokeMode = Enum.ApplyStrokeMode.Border, BorderStrokePosition = Enum.BorderStrokePosition.Center, Color = Colors.Tertiary, Thickness = 2 })
-			corners({page_boxvalue}, 4)
-			
-			if typeof(cache[name]) ~= "number" then continue end
-			page_boxvalue.FocusLost:Connect(function()
-				local entered_value = page_boxvalue.Text:gsub("%s+", "")
-				local modded: any = cache[`{name}Mod`]
-				local value: any = OldSpeed
-				if entered_value ~= "" then
-					local extract = tonumber(entered_value:match("(%d+%.?%d*)"))
-					value = extract or value
-					value = math.round(value * 100) / 100
-				end
-				local retext = string.format("%.2f", value):gsub("%.?0+$", "")
-				value = tonumber(retext) :: number
-				value *= modded
-				if modded ~= 1 then
-					retext ..= ` [{modded}x]`
-				end
-				cache[name] = value
-				page_boxvalue.Text = retext
-			end)
-			
-			if name == "PSpeed" then
-				WalkSpeedMod.Changed:Connect(function(value: number)
-					if value ~= 1 then
-						cache.PSpeed *= value
-						cache.PSpeedMod = value
-						page_boxvalue.Text = `{cache.PSpeed} [{value}x]}`
-					else
-						cache.PSpeed /= cache.PSpeedMod
-						cache.PSpeedMod = value
-						page_boxvalue.Text = `{cache.PSpeed}`
-					end
-				end)
-			else
-				RunSpeedMod.Changed:Connect(function(value: number)
-					if value ~= 1 then
-						cache.PRun *= value
-						cache.PRunMod = value
-						page_boxvalue.Text = `{cache.PRun} [{value}x]}`
-					else
-						cache.PRun /= cache.PRunMod
-						cache.PRunMod = value
-						page_boxvalue.Text = `{cache.PRun}`
-					end
-				end)
-			end
-		end
+		local page_buttonhitbox: TextButton = createInstance("TextButton", page_buttonframe, { AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = Colors.Tertiary, BorderSizePixel = 0, Name = "Button", Position = UDim2.fromScale(1, 0.5), Size = UDim2.fromScale(0.25, 1), FontFace = cache.DEFAULT_FONT, Text = "OFF", TextColor3 = Colors.WHITE, TextScaled = true })
+		corners({page_buttonhitbox}, 4)
+		
+		if cache[name] == nil then continue end
+		c[page_buttonhitbox] = name
+		
+		page_buttonhitbox.Activated:Connect(function()
+			if not cache.CanRefresh then return end
+			cache[name] = not cache[name]
+			refresh()
+		end)
 	end
 end
 
@@ -884,14 +818,12 @@ do --> Initialize
 	})
 	
 	createPage("Players", {
-		["PShow"] =		{ index = 1, label = "Show Players"					},
-		["PName"] =		{ index = 2, label = "Show Names"					},
-		["PToon"] =		{ index = 3, label = "Show Toon's Name"				},
-		["PHearts"] =	{ index = 4, label = "Show Hearts"					},
-		["PItems"] =	{ index = 6, label = "Show Items"					},
-		["PLight"] =	{ index = 7, label = "Light on Blackout"			},
-		["PSpeed"] =	{ index = 8, label = "Change WalkSpeed", box = true	},
-		["PRun"] =		{ index = 9, label = "Change RunSpeed", box = true	},
+		["PShow"] =		{ index = 1, label = "Show Players"			},
+		["PName"] =		{ index = 2, label = "Show Names"			},
+		["PToon"] =		{ index = 3, label = "Show Toon's Name"		},
+		["PHearts"] =	{ index = 4, label = "Show Hearts"			},
+		["PItems"] =	{ index = 6, label = "Show Items"			},
+		["PLight"] =	{ index = 7, label = "Light on Blackout"	},
 	})
 	
 	cache["Connected"] = FloorActive.Changed:Connect(refresh)
@@ -1090,30 +1022,5 @@ miniToggle.MouseButton1Up:Connect(function()
 	if cache["DESTROYING"] then
 		cache["DESTROYING"]:Disconnect()
 		cache["DESTROYING"] = nil
-	end
-end)
-
-local humanoid = character:FindFirstChildOfClass("Humanoid")
-local accum = 0
-cache["runConnect"] = RunService.RenderStepped:Connect(function(delta: number)
-	accum += delta
-	if accum < 0.1 then return end
-	accum = 0
-	
-	if not humanoid then humanoid = character:FindFirstChildOfClass("Humanoid") return end
-	humanoid.WalkSpeed = cache.Running and cache.PRun or cache.PSpeed
-end)
-
-cache["UISConnect1"] = UserInputService.InputBegan:Connect(function(input, processed)
-	if processed then return end
-	if input.KeyCode == Enum.KeyCode.LeftShift then
-		cache.Running = true
-	end
-end)
-
-cache["UISConnect2"] =UserInputService.InputEnded:Connect(function(input, processed)
-	if processed then return end
-	if input.KeyCode == Enum.KeyCode.LeftShift then
-		cache.Running = false
 	end
 end)
