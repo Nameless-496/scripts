@@ -303,7 +303,7 @@ end
 local function highlight(parent: Instance, color: Color3, text: string, stroke: Color3?, twisted: boolean?)
 	local stroke = stroke or Colors.BLACK
 	local function addBillboard(p: Instance, offset: Vector3?)
-		local BillboardGui: BillboardGui =	createInstance("BillboardGui", p, { Adornee = p, AlwaysOnTop = true, Name = "I.C.H.O.R. | BillboardGui", Size = UDim2.fromScale(12, 6), StudsOffsetWorldSpace = offset or Vector3.zero, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ClipsDescendants = true })
+		local BillboardGui: BillboardGui =	createInstance("BillboardGui", p, { Adornee = p, AlwaysOnTop = true, Name = "I.C.H.O.R. | BillboardGui", Size = UDim2.fromScale(5, 2), StudsOffsetWorldSpace = offset or Vector3.zero, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ClipsDescendants = true })
 		local TextLabel: TextLabel =		createInstance("TextLabel", BillboardGui, { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Font = Enum.Font.RobotoMono, Text = text, TextColor3 = color, TextScaled = true, TextStrokeColor3 = stroke, TextStrokeTransparency = 0 })
 		BillboardGui:AddTag(cache.TAG)
 	end
@@ -362,7 +362,7 @@ local function PlayerHighlight(parent: Instance, name: string, heart: number, sl
 	
 	local billboardGui = parent:FindFirstChild("I.C.H.O.R. | BillboardGui") :: BillboardGui?
 	if not billboardGui then
-		local billboardGui: BillboardGui =	createInstance("BillboardGui", parent, { Adornee = parent, AlwaysOnTop = true, Name = "I.C.H.O.R. | BillboardGui", Size = UDim2.fromOffset(100, 50), StudsOffsetWorldSpace = Vector3.new(0, 4, 0), ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ClipsDescendants = true })
+		local billboardGui: BillboardGui =	createInstance("BillboardGui", parent, { Adornee = parent, AlwaysOnTop = true, Name = "I.C.H.O.R. | BillboardGui", Size = UDim2.fromScale(5, 3), StudsOffsetWorldSpace = Vector3.new(0, 5, 0), ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ClipsDescendants = true })
 		billboardGui:AddTag(cache.TAG)
 		
 		local bbguiLayout: UIListLayout =	createInstance("UIListLayout", billboardGui, { SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Bottom })
