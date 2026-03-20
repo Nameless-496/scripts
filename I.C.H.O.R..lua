@@ -553,12 +553,12 @@ local function refresh(value: boolean?)
 				local Ichor = gen:FindFirstChild("Ichor") :: Part
 				local IchorFull = gen:FindFirstChild("IchorFull") :: Part
 				local percent = math.floor(100 * Ichor.Size.X / IchorFull.Size.X)
-				local per = percent .. "%"
+				local per = percent .. "%%"
 				
 				local function setPercentage()
 					if cache.Percentage and not completed.Value then
 						percent = math.floor(100 * Ichor.Size.X / IchorFull.Size.X)
-						per = percent .. "%"
+						per = percent .. "%%"
 						local str = buildMessage(gen):gsub("{p}", 100 / (IchorFull.Size.X/Ichor.Size.X) < 1 and "%%" or per)
 						highlight(gen, Colors.RED, str)
 					else
@@ -1002,7 +1002,7 @@ miniToggle.MouseButton1Down:Connect(function()
 	minitoggle_outline.Visible = true
 	cache["DESTROYING"] = RunService.Heartbeat:Connect(function(delta: number)
 		local elapsed = os.clock() - start
-		local alpha = math.clamp(elapsed / 3, 0, 1)
+		local alpha = math.clamp(elapsed / 1, 0, 1)
 		minitoggle_fill.Size = UDim2.fromScale(alpha, 1)
 		
 		if alpha == 1 then
