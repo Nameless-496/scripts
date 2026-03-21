@@ -32,6 +32,9 @@ local cache = {
 	Closest_E = false,
 	Closest_P = false,
 	Items = false,
+	Short = false,
+	Puddles = false,
+	Ichor = false,
 	Monsters = false,
 	Light = false,
 	Waypoints = false,
@@ -158,7 +161,6 @@ task.defer(function()
 		local m = mt:gsub("{msg}", str)
 		return m
 	end
-	
 	RBXGeneral:DisplaySystemMessage(msg("INSERTED I.C.H.O.R."))
 	RBXGeneral:DisplaySystemMessage(msg("THANK YOU FOR CHOOSING OUR SERVICES<br/>|| Instantaneous Command Highlighting Object Recognition "))
 end)
@@ -440,7 +442,7 @@ local function PlayerHighlight(parent: Instance, name: string, heart: number, sl
 				until h == heart
 			end
 		end
-		
+	
 		if cache.PItems then
 			for _, s in Items:GetChildren() do
 				if not slot or not s:IsA("ImageLabel") then continue end
@@ -508,10 +510,22 @@ local function setnil(sets: {string})
 	end
 end
 
+local function looptillfound(find: Instance, target: string)
+	local found = nil
+	local timeout = 10
+	local start = os.time()
+	repeat
+		local elapsed = os.time() - start
+		found = find:FindFirstChild(target, true)
+		RunService.Heartbeat:Wait()
+	until elapsed >= timeout or found
+	if not found then warn(`Target {target} not found! [Timed Out]`) end
+	return found
+end
+
 local function refresh(value: boolean?)
 	if not cache.CanRefresh or value == false then return end
 	setCanRefresh(false)
-	task.delay(0.2, setCanRefresh, true)
 	
 	for _, CONN in CHANGE_CONNECTIONS do
 		CONN:Disconnect()
@@ -523,177 +537,200 @@ local function refresh(value: boolean?)
 		if not cache.Machines then destroy("Generators") else
 			local minDistance = math.huge
 			local closestGenElevator
-			local folder = CurrentRoom:FindFirstChild("Generators", true)
-			
-			local function buildMessage(gen)
-				local msg = "Machine [{p}]"
-				if cache.Closest_E and closestGenElevator == gen then
-					msg ..= "[CtE]"
+			local folder = looptillfound(CurrentRoom, "Generators")
+			if folder then
+				local function buildMessage(gen)
+					local msg = "Machine [{p}]"
+					if cache.Closest_E and closestGenElevator == gen then
+						msg ..= "[CtE]"
+					end
+					if cache.Closest_P and cache.closestGenerator == gen then
+						msg ..= "[CtP]"
+					end
+					return msg
 				end
-				if cache.Closest_P and cache.closestGenerator == gen then
-					msg ..= "[CtP]"
-				end
-				return msg
-			end
-			
-			for _, gen in folder:GetChildren() do
-				local IchorFull = gen:FindFirstChild("IchorFull", true)
-				if IchorFull and IchorFull:IsA("BasePart") then
-					local distance_E = (Info.ElevatorPrompt.Position - IchorFull.Position).Magnitude
-					if distance_E < minDistance then
-						minDistance = distance_E
-						closestGenElevator = gen
+				
+				for _, gen in folder:GetChildren() do
+					local IchorFull = gen:FindFirstChild("IchorFull", true)
+					if IchorFull and IchorFull:IsA("BasePart") then
+						local distance_E = (Info.ElevatorPrompt.Position - IchorFull.Position).Magnitude
+						if distance_E < minDistance then
+							minDistance = distance_E
+							closestGenElevator = gen
+						end
 					end
 				end
-			end
-			
-			for _, gen in folder:GetChildren() do
-				local gStats = gen:FindFirstChild("Stats") :: Folder
-				local completed = gStats:FindFirstChild("Completed") :: BoolValue
-				local Connie = gStats:FindFirstChild("Connie") :: BoolValue
-				local Ichor = gen:FindFirstChild("Ichor") :: Part
-				local IchorFull = gen:FindFirstChild("IchorFull") :: Part
-				local percent = math.floor(100 * Ichor.Size.X / IchorFull.Size.X)
-				local per = tostring(percent) .. "%%"
 				
-				local function setPercentage()
-					if cache.Percentage and not completed.Value then
-						percent = math.floor(100 * Ichor.Size.X / IchorFull.Size.X)
-						per = tostring(percent) .. "%%"
-						local str = buildMessage(gen):gsub("{p}", per)
-						highlight(gen, Colors.RED, str)
-					else
-						local str = buildMessage(gen):gsub("{p}", "incomplete")
-						highlight(gen, Colors.RED, str)
+				for _, gen in folder:GetChildren() do
+					local gStats = gen:FindFirstChild("Stats") :: Folder
+					local completed = gStats:FindFirstChild("Completed") :: BoolValue
+					local Connie = gStats:FindFirstChild("Connie") :: BoolValue
+					local Ichor = gen:FindFirstChild("Ichor") :: Part
+					local IchorFull = gen:FindFirstChild("IchorFull") :: Part
+					local percent = math.floor(100 * Ichor.Size.X / IchorFull.Size.X)
+					local per = tostring(percent) .. "%%"
+					
+					local function setPercentage()
+						if cache.Percentage and not completed.Value then
+							percent = math.floor(100 * Ichor.Size.X / IchorFull.Size.X)
+							per = tostring(percent) .. "%%"
+							local str = buildMessage(gen):gsub("{p}", per)
+							highlight(gen, Colors.RED, str)
+						else
+							local str = buildMessage(gen):gsub("{p}", "incomplete")
+							highlight(gen, Colors.RED, str)
+						end
 					end
-				end
-				setPercentage()
-				table.insert(CHANGE_CONNECTIONS, Ichor:GetPropertyChangedSignal("Size"):Connect(setPercentage))
-				
-				if completed.Value then
-					local str = buildMessage(gen):gsub("{p}", cache.Percentage and "100%%" or "completed")
-					highlight(gen, Colors.GREEN, str)
-				end
-				if Connie.Value then
-					local str = buildMessage(gen):gsub("{p}", "Haunted")
-					highlight(gen, Colors.CYAN, str)
-				end
-				
-				table.insert(CHANGE_CONNECTIONS, completed.Changed:Connect(function(value: boolean)
-					if value then
-						local str = buildMessage(gen):gsub("{p}", "completed")
+					setPercentage()
+					table.insert(CHANGE_CONNECTIONS, Ichor:GetPropertyChangedSignal("Size"):Connect(setPercentage))
+					
+					if completed.Value then
+						local str = buildMessage(gen):gsub("{p}", cache.Percentage and "100%%" or "completed")
 						highlight(gen, Colors.GREEN, str)
 					end
-				end))
-				
-				table.insert(CHANGE_CONNECTIONS, Connie.Changed:Connect(function()
-					if completed.Value then
+					if Connie.Value then
 						local str = buildMessage(gen):gsub("{p}", "Haunted")
 						highlight(gen, Colors.CYAN, str)
-					else
-						if cache.Percentage then
-							local str = buildMessage(gen):gsub("{p}", per)
-							highlight(gen, completed.Value and Colors.GREEN or Colors.RED, str)
-						else
-							local col = completed.Value and Colors.GREEN or Colors.RED
-							local str = buildMessage(gen):gsub("{p}", completed.Value and "completed" or "incomplete")
-							highlight(gen, col, str)
-						end
 					end
-				end))
-			end
-			
-			setnil({"closestPlayerConnect"})
-			if cache.Closest_P then
-				local accum = 0
-				cache["closestPlayerConnect"] = RunService.Heartbeat:Connect(function(delta: number)
-					accum += delta
-					if accum < 0.1 then return end
-					accum = 0
 					
-					local rootPart = character:FindFirstChild("HumanoidRootPart")
-					if not rootPart then return end
-					local playerPos = rootPart.Position
-					local closest
-					local minDist = math.huge
+					table.insert(CHANGE_CONNECTIONS, completed.Changed:Connect(function(value: boolean)
+						if value then
+							local str = buildMessage(gen):gsub("{p}", cache.Percentage and "100%%" or "completed")
+							highlight(gen, Colors.GREEN, str)
+						end
+					end))
 					
-					for _, gen in folder:GetChildren() do
-						local ichorFull = gen:FindFirstChild("IchorFull", true)
-						if ichorFull and ichorFull:IsA("BasePart") then
-							local dist = (playerPos - ichorFull.Position).Magnitude
-							if dist < minDist then
-								minDist = dist
-								closest = gen
+					table.insert(CHANGE_CONNECTIONS, Connie.Changed:Connect(function(value: boolean)
+						if value then
+							local str = buildMessage(gen):gsub("{p}", "Haunted")
+							highlight(gen, Colors.CYAN, str)
+						else
+							if cache.Percentage then
+								local str = buildMessage(gen):gsub("{p}", per)
+								highlight(gen, completed.Value and Colors.GREEN or Colors.RED, str)
+							else
+								local col = completed.Value and Colors.GREEN or Colors.RED
+								local str = buildMessage(gen):gsub("{p}", completed.Value and "completed" or "incomplete")
+								highlight(gen, col, str)
 							end
 						end
-					end
-					
-					if closest ~= cache.closestGenerator then
-						cache.closestGenerator = closest
-						refresh()
-					end
-				end)
+					end))
+				end
+				
+				setnil({"closestPlayerConnect"})
+				if cache.Closest_P then
+					local accum = 0
+					cache["closestPlayerConnect"] = RunService.Heartbeat:Connect(function(delta: number)
+						accum += delta
+						if accum < 0.1 then return end
+						accum = 0
+						
+						local rootPart = character:FindFirstChild("HumanoidRootPart")
+						if not rootPart then return end
+						local playerPos = rootPart.Position
+						local closest
+						local minDist = math.huge
+						
+						for _, gen in folder:GetChildren() do
+							local ichorFull = gen:FindFirstChild("IchorFull", true)
+							if ichorFull and ichorFull:IsA("BasePart") then
+								local dist = (playerPos - ichorFull.Position).Magnitude
+								if dist < minDist then
+									minDist = dist
+									closest = gen
+								end
+							end
+						end
+						
+						if closest ~= cache.closestGenerator then
+							cache.closestGenerator = closest
+							refresh()
+						end
+					end)
+				end
 			end
 		end
 		
 		if not cache.Items then destroy("Items") else
-			local folder = CurrentRoom:FindFirstChild("Items", true)
-			for _, item in folder:GetChildren() do
-				if item.Name == "ResearchCapsule" then
-					local name = item.Prompt.Monster.Value or ""
-					name = string.gsub(name, "Monster", "") .. item.Name
-					highlight(item, Colors.WHITE, name)
-				elseif item.Name == "FakeCapsule" then
-					local col = cache.Monsters and Colors.RED or Colors.WHITE
-					local nam = cache.Monsters and "Rodger" or "RodgerResearchCapsule"
-					local str = cache.Monsters and Colors.WHITE or nil
-					local twi = cache.Monsters
-					highlight(item, col, nam, str, twi)
-				elseif table.find(ItemsRarity.Rare, item.Name) then
-					highlight(item, Color3.new(1, 1, 0), item.Name, Color3.new(0.5, 0.5, 0))
-				elseif table.find(ItemsRarity.VeryRare, item.Name) then
-					highlight(item, Color3.new(1, 0, 1), item.Name, Color3.new(0.5, 0, 0.5))
-				elseif table.find(ItemsRarity.UltraRare, item.Name) then
-					highlight(item, Color3.new(0.5, 0, 1), item.Name, Color3.new(0.25, 0, 0.5))
-				else
-					highlight(item, Colors.WHITE, item.Name)
+			local folder = looptillfound(CurrentRoom, "Items")
+			if folder then
+				for _, item: any in folder:GetChildren() do
+					if item.Name == "ResearchCapsule" then
+						local name = item.Prompt.Monster.Value or ""
+						name = name:gsub("Monster", "") .. item.Name
+						if cache.Short then name = name:gsub("ResearchCapsule", "RC") end
+						highlight(item, Colors.WHITE, name)
+					elseif item.Name == "FakeCapsule" then
+						local col = cache.Monsters and Colors.RED or Colors.WHITE
+						local nam = cache.Monsters and "Rodger" or "RodgerResearchCapsule"
+						local str = cache.Monsters and Colors.WHITE or nil
+						local twi = cache.Monsters
+						if cache.Short then nam = nam:gsub("ResearchCapsule", "RC") end
+						highlight(item, col, nam, str, twi)
+					elseif table.find(ItemsRarity.Rare, item.Name) then
+						highlight(item, Color3.new(1, 1, 0), item.Name, Color3.new(0.5, 0.5, 0))
+					elseif table.find(ItemsRarity.VeryRare, item.Name) then
+						highlight(item, Color3.new(1, 0, 1), item.Name, Color3.new(0.5, 0, 0.5))
+					elseif table.find(ItemsRarity.UltraRare, item.Name) then
+						highlight(item, Color3.new(0.5, 0, 1), item.Name, Color3.new(0.25, 0, 0.5))
+					else
+						highlight(item, Colors.WHITE, item.Name)
+					end
 				end
 			end
 		end
 		
+		if not cache.Puddles then destroy("Puddles") else
+			local folder = looptillfound(CurrentRoom, "Puddles")
+			if folder then
+				for _, puddle in folder:GetChildren() do
+					highlight(puddle, Colors.WHITE, "")
+				end
+			end
+		end
+		
+		local ichorScreen = looptillfound(CoreGui, "IchorScreen")
+		if ichorScreen and ichorScreen:IsA("ScreenGui") then
+			ichorScreen.Enabled = not cache.Ichor
+		end
+		
 		if not cache.Monsters then destroy("Monsters") else
-			local folder = CurrentRoom:FindFirstChild("Monsters", true)
-			for _, mons in folder:GetChildren() do
-				local name = string.gsub(mons.Name, "Monster", "")
-				if name == "Rodger" then
-					for _, r in CurrentRoom:GetDescendants() do
-						if r.Name == "FakeCapsule" then
-							highlight(r, Colors.RED, name, Colors.WHITE, true)
-						end
-					end
-				else
-					local rootPart = mons:FindFirstChild("HumanoidRootPart")
-					if rootPart then
-						if cache.Light and BlackOut.Value then
-							if not rootPart:FindFirstChild("I.C.H.O.R. | PointLight") then
-								local PL = createInstance("PointLight", rootPart, { Brightness = 1, Range = 24, Name = "I.C.H.O.R. | PointLight" })
-								PL:AddTag(cache.TAG)
+			local folder = looptillfound(CurrentRoom, "Monsters")
+			if folder then
+				for _, mons in folder:GetChildren() do
+					local name = string.gsub(mons.Name, "Monster", "")
+					if name == "Rodger" then
+						for _, r in CurrentRoom:GetDescendants() do
+							if r.Name == "FakeCapsule" then
+								highlight(r, Colors.RED, name, Colors.WHITE, true)
 							end
-						elseif not cache.Light then
-							local PL = rootPart:FindFirstChild("I.C.H.O.R. | PointLight")
-							if PL then PL:Destroy() end
 						end
-						highlight(mons, Colors.RED, name, Colors.WHITE, true)
+					else
+						local rootPart = mons:FindFirstChild("HumanoidRootPart")
+						if rootPart then
+							if cache.Light and BlackOut.Value then
+								if not rootPart:FindFirstChild("I.C.H.O.R. | PointLight") then
+									local PL = createInstance("PointLight", rootPart, { Brightness = 1, Range = 24, Name = "I.C.H.O.R. | PointLight" })
+									PL:AddTag(cache.TAG)
+								end
+							elseif not cache.Light then
+								local PL = rootPart:FindFirstChild("I.C.H.O.R. | PointLight")
+								if PL then PL:Destroy() end
+							end
+							highlight(mons, Colors.RED, name, Colors.WHITE, true)
+						end
 					end
 				end
 			end
 		end
 		
 		do
-			local folder = CurrentRoom:FindFirstChild("Waypoints", true)
-			for _, waypoint in folder:GetChildren() do
-				if not waypoint:IsA("BasePart") then continue end
-				waypoint.Transparency = cache.Waypoints and 0 or 1
+			local folder = looptillfound(CurrentRoom, "Waypoints")
+			if folder then
+				for _, waypoint in folder:GetChildren() do
+					if not waypoint:IsA("BasePart") then continue end
+					waypoint.Transparency = cache.Waypoints and 0 or 1
+				end
 			end
 		end
 		
@@ -706,7 +743,8 @@ local function refresh(value: boolean?)
 				local Slot1, Slot2, Slot3
 				
 				if cache.PItems then
-					for i, slot in pairs(Inventory:GetChildren()) do
+					for _, slot in Inventory:GetChildren() do
+						local i = tonumber(slot.Name:sub(-1))
 						if i == 1 then
 							Slot1 = slot
 						elseif i == 2 then
@@ -748,6 +786,7 @@ local function refresh(value: boolean?)
 	for btn, nam in pairs(c) do
 		btn.Text = cache[nam] and "ON" or "OFF"
 	end
+	setCanRefresh(true)
 end
 
 local function createPage(title: string, buttons_data: { [string]: { label: string, index: number }})
@@ -804,17 +843,17 @@ do --> Initialize
 		["Closest_E"] =		{ index = 3, label = "Closest To Elevator"	},
 		["Closest_P"] =		{ index = 4, label = "Closest To Player"	},
 	})
-	
 	createPage("Items", {
-		["Items"] = { index = 1, label = "Show Items" },
+		["Items"] =		{ index = 1, label = "Show Items"			},
+		["Short"] =		{ index = 2, label = "Shorten Capsule Name"	},
+		["Puddles"] =	{ index = 3, label = "Show Puddles"			},
+		["Ichor"] =		{ index = 4, label = "Hide Screen Ichor"	},
 	})
-	
 	createPage("Monsters", {
 		["Monsters"] =	{ index = 1, label = "Show Monsters"		},
 		["Light"] =		{ index = 2, label = "Light on Blackout"	},
 		["Waypoints"] =	{ index = 3, label = "Show Waypoints"		},
 	})
-	
 	createPage("Players", {
 		["PShow"] =		{ index = 1, label = "Show Players"			},
 		["PName"] =		{ index = 2, label = "Show Names"			},
