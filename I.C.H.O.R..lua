@@ -511,6 +511,7 @@ end
 local function refresh(value: boolean?)
 	if not cache.CanRefresh or value == false then return end
 	setCanRefresh(false)
+	task.delay(0.2, setCanRefresh, true)
 	
 	for _, CONN in CHANGE_CONNECTIONS do
 		CONN:Disconnect()
@@ -553,13 +554,13 @@ local function refresh(value: boolean?)
 				local Ichor = gen:FindFirstChild("Ichor") :: Part
 				local IchorFull = gen:FindFirstChild("IchorFull") :: Part
 				local percent = math.floor(100 * Ichor.Size.X / IchorFull.Size.X)
-				local per = percent .. "%%"
+				local per = tostring(percent) .. "%%"
 				
 				local function setPercentage()
 					if cache.Percentage and not completed.Value then
 						percent = math.floor(100 * Ichor.Size.X / IchorFull.Size.X)
-						per = percent .. "%%"
-						local str = buildMessage(gen):gsub("{p}", 100 / (IchorFull.Size.X/Ichor.Size.X) < 1 and "%%" or per)
+						per = tostring(percent) .. "%%"
+						local str = buildMessage(gen):gsub("{p}", per)
 						highlight(gen, Colors.RED, str)
 					else
 						local str = buildMessage(gen):gsub("{p}", "incomplete")
@@ -698,49 +699,48 @@ local function refresh(value: boolean?)
 		
 		if not cache.PShow then destroy("PLAYER") else
 			for _, char in InGamePlayers:GetChildren() do
-				if char ~= character then
-					local name = char.Name
-					local Health = char.Stats.Health
-					local Inventory = char.Inventory
-					local Slot1, Slot2, Slot3
-					
-					if cache.PItems then
-						for i, slot in pairs(Inventory:GetChildren()) do
-							if i == 1 then
-								Slot1 = slot
-							elseif i == 2 then
-								Slot2 = slot
-							else
-								Slot3 = slot
-							end
-							if slot.Value ~= "None" then
-								PlayerHighlight(char, char.Name, Health.Value, slot)
-							end
+				if char == character then continue end
+				local name = char.Name
+				local Health = char.Stats.Health
+				local Inventory = char.Inventory
+				local Slot1, Slot2, Slot3
+				
+				if cache.PItems then
+					for i, slot in pairs(Inventory:GetChildren()) do
+						if i == 1 then
+							Slot1 = slot
+						elseif i == 2 then
+							Slot2 = slot
+						else
+							Slot3 = slot
 						end
-						
-						table.insert(CHANGE_CONNECTIONS, Slot1.Changed:Connect(function()
-							PlayerHighlight(char, char.Name, Health.Value, Slot1)
-						end))
-						
-						table.insert(CHANGE_CONNECTIONS, Slot2.Changed:Connect(function()
-							PlayerHighlight(char, char.Name, Health.Value, Slot2)
-						end))
-						
-						table.insert(CHANGE_CONNECTIONS, Slot3.Changed:Connect(function()
-							PlayerHighlight(char, char.Name, Health.Value, Slot3)
-						end))
-					else
-						PlayerHighlight(char, char.Name, Health.Value)
+						if slot.Value ~= "None" then
+							PlayerHighlight(char, char.Name, Health.Value, slot)
+						end
 					end
 					
-					table.insert(CHANGE_CONNECTIONS, Health.Changed:Connect(function()
-						if cache.Hearts then
-							PlayerHighlight(char, char.Name, Health.Value)
-						end
+					table.insert(CHANGE_CONNECTIONS, Slot1.Changed:Connect(function()
+						PlayerHighlight(char, char.Name, Health.Value, Slot1)
 					end))
 					
+					table.insert(CHANGE_CONNECTIONS, Slot2.Changed:Connect(function()
+						PlayerHighlight(char, char.Name, Health.Value, Slot2)
+					end))
+					
+					table.insert(CHANGE_CONNECTIONS, Slot3.Changed:Connect(function()
+						PlayerHighlight(char, char.Name, Health.Value, Slot3)
+					end))
+				else
 					PlayerHighlight(char, char.Name, Health.Value)
 				end
+				
+				table.insert(CHANGE_CONNECTIONS, Health.Changed:Connect(function()
+					if cache.Hearts then
+						PlayerHighlight(char, char.Name, Health.Value)
+					end
+				end))
+				
+				PlayerHighlight(char, char.Name, Health.Value)
 			end
 		end
 	end
@@ -748,8 +748,6 @@ local function refresh(value: boolean?)
 	for btn, nam in pairs(c) do
 		btn.Text = cache[nam] and "ON" or "OFF"
 	end
-	
-	setCanRefresh(true)
 end
 
 local function createPage(title: string, buttons_data: { [string]: { label: string, index: number }})
