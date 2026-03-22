@@ -45,6 +45,7 @@ local cache = {
 	PHearts = false,
 	PItems = false,
 	PLight = false,
+	PColor = true,
 	
 	TAG = "I.C.H.O.R._HIGHLIGHT_TAG",
 	TotalPages = 0,
@@ -161,8 +162,7 @@ task.defer(function()
 		local m = mt:gsub("{msg}", str)
 		return m
 	end
-	RBXGeneral:DisplaySystemMessage(msg("INSERTED I.C.H.O.R."))
-	RBXGeneral:DisplaySystemMessage(msg("THANK YOU FOR CHOOSING OUR SERVICES<br/>|| Instantaneous Command Highlighting Object Recognition "))
+	RBXGeneral:DisplaySystemMessage(msg("INSERTED I.C.H.O.R.<br/>|| Instantaneous Command Highlighting Object Recognition"))
 end)
 
 --> Gui creation
@@ -353,7 +353,7 @@ local function PlayerHighlight(parent: Instance, name: string, heart: number, sl
 	
 	local pickedValue = PickedCharacters:FindFirstChild(parent.Name) :: StringValue
 	local picked = pickedValue.Value
-	local pickedColor = toons[picked]
+	local pickedColor = cache.PColor and toons[picked] or Colors.CYAN
 	
 	local Highlight = parent:FindFirstChild("I.C.H.O.R. | Highlight") :: Highlight?
 	if not Highlight then
@@ -437,7 +437,7 @@ local function PlayerHighlight(parent: Instance, name: string, heart: number, sl
 				until h == heart
 			elseif h > heart then
 				repeat h -= 1
-					local Heart = Hearts:FindFirstChild("`Heart{h + 1}`")
+					local Heart = Hearts:FindFirstChild(`Heart{h + 1}`)
 					if Heart then Heart:Destroy() end
 				until h == heart
 			end
@@ -453,6 +453,7 @@ local function PlayerHighlight(parent: Instance, name: string, heart: number, sl
 						but.Visible = false
 						s.Image = img
 					else
+						s.Image = ""
 						but.Visible = true
 						but.Text = slot.Value
 					end
@@ -510,19 +511,6 @@ local function setnil(sets: {string})
 	end
 end
 
-local function looptillfound(find: Instance, target: string)
-	local found = nil
-	local timeout = 10
-	local start = os.time()
-	repeat
-		local elapsed = os.time() - start
-		found = find:FindFirstChild(target, true)
-		RunService.Heartbeat:Wait()
-	until elapsed >= timeout or found
-	if not found then warn(`Target {target} not found! [Timed Out]`) end
-	return found
-end
-
 local function refresh(value: boolean?)
 	if not cache.CanRefresh or value == false then return end
 	setCanRefresh(false)
@@ -532,12 +520,12 @@ local function refresh(value: boolean?)
 	end
 	table.clear(CHANGE_CONNECTIONS)
 	
-	local Floor = #CurrentRoom:GetChildren()
-	if Floor ~= 0 then
+	local Floor = CurrentRoom:FindFirstChildOfClass("Model")
+	if Floor then
 		if not cache.Machines then destroy("Generators") else
 			local minDistance = math.huge
 			local closestGenElevator
-			local folder = looptillfound(CurrentRoom, "Generators")
+			local folder = Floor:FindFirstChild("Generators")
 			if folder then
 				local function buildMessage(gen)
 					local msg = "Machine [{p}]"
@@ -570,19 +558,28 @@ local function refresh(value: boolean?)
 					local percent = math.floor(100 * Ichor.Size.X / IchorFull.Size.X)
 					local per = tostring(percent) .. "%%"
 					
-					local function setPercentage()
-						if cache.Percentage and not completed.Value then
-							percent = math.floor(100 * Ichor.Size.X / IchorFull.Size.X)
-							per = tostring(percent) .. "%%"
-							local str = buildMessage(gen):gsub("{p}", per)
-							highlight(gen, Colors.RED, str)
+					local function updateValue()
+						local comp = completed.Value
+						local haunt = Connie.Value
+						local str = buildMessage(gen)
+						local col = Colors.RED
+						if haunt then
+							str = str:gsub("{p}", "Huanted")
 						else
-							local str = buildMessage(gen):gsub("{p}", "incomplete")
-							highlight(gen, Colors.RED, str)
+							if cache.Percentage then
+								percent = math.floor(100 * Ichor.Size.X / IchorFull.Size.X)
+								per = tostring(percent) .. "%%"
+								str = str:gsub("{p}", comp and "100%%" or per)
+							else
+								str = str:gsub("{p}", comp and "completed" or "incomplete")
+							end
 						end
+						if comp then col = Colors.RED end
+						if haunt then col = Colors.CYAN end
+						highlight(gen, col, str)
 					end
-					setPercentage()
-					table.insert(CHANGE_CONNECTIONS, Ichor:GetPropertyChangedSignal("Size"):Connect(setPercentage))
+					updateValue()
+					table.insert(CHANGE_CONNECTIONS, Ichor:GetPropertyChangedSignal("Size"):Connect(updateValue))
 					
 					if completed.Value then
 						local str = buildMessage(gen):gsub("{p}", cache.Percentage and "100%%" or "completed")
@@ -593,28 +590,8 @@ local function refresh(value: boolean?)
 						highlight(gen, Colors.CYAN, str)
 					end
 					
-					table.insert(CHANGE_CONNECTIONS, completed.Changed:Connect(function(value: boolean)
-						if value then
-							local str = buildMessage(gen):gsub("{p}", cache.Percentage and "100%%" or "completed")
-							highlight(gen, Colors.GREEN, str)
-						end
-					end))
-					
-					table.insert(CHANGE_CONNECTIONS, Connie.Changed:Connect(function(value: boolean)
-						if value then
-							local str = buildMessage(gen):gsub("{p}", "Haunted")
-							highlight(gen, Colors.CYAN, str)
-						else
-							if cache.Percentage then
-								local str = buildMessage(gen):gsub("{p}", per)
-								highlight(gen, completed.Value and Colors.GREEN or Colors.RED, str)
-							else
-								local col = completed.Value and Colors.GREEN or Colors.RED
-								local str = buildMessage(gen):gsub("{p}", completed.Value and "completed" or "incomplete")
-								highlight(gen, col, str)
-							end
-						end
-					end))
+					table.insert(CHANGE_CONNECTIONS, completed.Changed:Connect(updateValue))
+					table.insert(CHANGE_CONNECTIONS, Connie.Changed:Connect(updateValue))
 				end
 				
 				setnil({"closestPlayerConnect"})
@@ -652,7 +629,7 @@ local function refresh(value: boolean?)
 		end
 		
 		if not cache.Items then destroy("Items") else
-			local folder = looptillfound(CurrentRoom, "Items")
+			local folder = Floor:FindFirstChild("Items")
 			if folder then
 				for _, item: any in folder:GetChildren() do
 					if item.Name == "ResearchCapsule" then
@@ -681,7 +658,7 @@ local function refresh(value: boolean?)
 		end
 		
 		if not cache.Puddles then destroy("Puddles") else
-			local folder = looptillfound(CurrentRoom, "Puddles")
+			local folder = Floor:FindFirstChild("Puddles")
 			if folder then
 				for _, puddle in folder:GetChildren() do
 					highlight(puddle, Colors.WHITE, "")
@@ -689,13 +666,13 @@ local function refresh(value: boolean?)
 			end
 		end
 		
-		local ichorScreen = looptillfound(CoreGui, "IchorScreen")
+		local ichorScreen = Floor:FindFirstChild("IchorScreen")
 		if ichorScreen and ichorScreen:IsA("ScreenGui") then
 			ichorScreen.Enabled = not cache.Ichor
 		end
 		
 		if not cache.Monsters then destroy("Monsters") else
-			local folder = looptillfound(CurrentRoom, "Monsters")
+			local folder = Floor:FindFirstChild("Monsters")
 			if folder then
 				for _, mons in folder:GetChildren() do
 					local name = string.gsub(mons.Name, "Monster", "")
@@ -725,7 +702,7 @@ local function refresh(value: boolean?)
 		end
 		
 		do
-			local folder = looptillfound(CurrentRoom, "Waypoints")
+			local folder = Floor:FindFirstChild("Waypoints")
 			if folder then
 				for _, waypoint in folder:GetChildren() do
 					if not waypoint:IsA("BasePart") then continue end
@@ -789,7 +766,7 @@ local function refresh(value: boolean?)
 	setCanRefresh(true)
 end
 
-local function createPage(title: string, buttons_data: { [string]: { label: string, index: number }})
+local function createPage(title: string, buttons_data: { [string]: { label: string, index: number, enabled: boolean? }})
 	cache.TotalPages += 1
 	local newPage: ScrollingFrame =	Copy(tempPage, contentPage, { Name = title })
 	local newButton: TextButton =	createInstance("TextButton", pageButtons, { BackgroundColor3 = Colors.Tertiary, BorderSizePixel = 0, Name = title, Size = UDim2.new(0, 75, 1), FontFace = cache.DEFAULT_FONT, Text = title, TextSize = 14, TextColor3 = Colors.WHITE })
@@ -817,7 +794,7 @@ local function createPage(title: string, buttons_data: { [string]: { label: stri
 		local page_buttonpadding: UIPadding =	Copy(titlePadding, page_buttonframe, { PaddingRight = UDim.new(0, 5) })
 		local page_buttonlabel: TextLabel =		createInstance("TextLabel", page_buttonframe, { BackgroundTransparency = 1, Size = UDim2.fromScale(0.75, 1), FontFace = Font.fromName("Montserrat"), Text = data.label, TextColor3 = Colors.WHITE, TextSize = 21, TextTruncate = Enum.TextTruncate.SplitWord, TextXAlignment = Enum.TextXAlignment.Left })
 		
-		local page_buttonhitbox: TextButton = createInstance("TextButton", page_buttonframe, { AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = Colors.Tertiary, BorderSizePixel = 0, Name = "Button", Position = UDim2.fromScale(1, 0.5), Size = UDim2.fromScale(0.25, 1), FontFace = cache.DEFAULT_FONT, Text = "OFF", TextColor3 = Colors.WHITE, TextScaled = true })
+		local page_buttonhitbox: TextButton = createInstance("TextButton", page_buttonframe, { AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = Colors.Tertiary, BorderSizePixel = 0, Name = "Button", Position = UDim2.fromScale(1, 0.5), Size = UDim2.fromScale(0.25, 1), FontFace = cache.DEFAULT_FONT, Text = data.enabled and "ON" or "OFF", TextColor3 = Colors.WHITE, TextScaled = true })
 		corners({page_buttonhitbox}, 4)
 		
 		if cache[name] == nil then continue end
@@ -861,6 +838,7 @@ do --> Initialize
 		["PHearts"] =	{ index = 4, label = "Show Hearts"			},
 		["PItems"] =	{ index = 6, label = "Show Items"			},
 		["PLight"] =	{ index = 7, label = "Light on Blackout"	},
+		["PColor"] =	{ index = 8, label = "Toon Color Coded", enabled = true },
 	})
 	
 	cache["Connected"] = FloorActive.Changed:Connect(refresh)
