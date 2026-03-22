@@ -42,7 +42,7 @@ local cache = {
 	PShow = false,
 	PName = false,
 	PToon = false,
-	PHearts = false,
+	PStam = false,
 	PItems = false,
 	PLight = false,
 	PColor = true,
@@ -60,8 +60,9 @@ local cache = {
 	OLD_SIZE = UDim2.new(),
 	DEFAULT_FONT = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Bold)
 }
-local CONNECTIONS = {"Connected", "closestPlayerConnect", "runConnect", "UISConnect1", "UISConnect2"}
+local CONNECTIONS = {"Connected", "closestPlayerConnect", "runConnect"}
 local CHANGE_CONNECTIONS: {RBXScriptConnection} = {}
+local STAM_CONNECTIONS: {RBXScriptConnection} = {}
 
 local images = {
 	Heart = "rbxassetid://16790556042",
@@ -347,9 +348,13 @@ local function darkenColor(col: Color3)
 	return Color3.fromHSV(h, s, v)
 end
 
-local function PlayerHighlight(parent: Instance, name: string, heart: number, slot: StringValue?)
+local function PlayerHighlight(parent: Instance, name: string, slot: StringValue?)
 	local inventory = parent:FindFirstChild("Inventory")
-	if not inventory then return end
+	local stats = parent:FindFirstChild("Stats")
+	if not inventory or not stats then return end
+	
+	local CurrentStamina = stats:FindFirstChild("CurrentStamina") :: NumberValue
+	local Stamina = stats:FindFirstChild("Stamina") :: NumberValue
 	
 	local pickedValue = PickedCharacters:FindFirstChild(parent.Name) :: StringValue
 	local picked = pickedValue.Value
@@ -368,25 +373,22 @@ local function PlayerHighlight(parent: Instance, name: string, heart: number, sl
 		billboardGui:AddTag(cache.TAG)
 		
 		local bbguiLayout: UIListLayout =	createInstance("UIListLayout", billboardGui, { SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Bottom })
-		local TextLabel: TextLabel =		createInstance("TextLabel", billboardGui, { BackgroundTransparency = 1, LayoutOrder = 0, Size = UDim2.fromScale(1, 1/4), Visible = cache.PName, Font = Enum.Font.RobotoMono, Text = name, TextColor3 = Colors.CYAN, TextScaled = true, TextStrokeColor3 = Color3.new(0, 0.5, 0.5), TextStrokeTransparency = 0 })
-		local ToonLabel: TextLabel =		Copy(TextLabel, billboardGui, { LayoutOrder = -1, Name = "ToonLabel", Visible = cache.PToon, Text = `[{picked}]`, TextColor3 = pickedColor, TextStrokeColor3 = darkenColor(pickedColor) })
+		local StamFrame: Frame =			createInstance("Frame", billboardGui, { BackgroundTransparency = 1, LayoutOrder = 0, Name = "Stamina", Size = UDim2.fromScale(1, 1/4), Visible = cache.PStam })
+		local TextLabel: TextLabel =		createInstance("TextLabel", billboardGui, { BackgroundTransparency = 1, LayoutOrder = -1, Size = UDim2.fromScale(1, 1/4), Visible = cache.PName, Font = Enum.Font.RobotoMono, Text = name, TextColor3 = Colors.CYAN, TextScaled = true, TextStrokeColor3 = Color3.new(0, 0.5, 0.5), TextStrokeTransparency = 0 })
+		local ToonLabel: TextLabel =		Copy(TextLabel, billboardGui, { LayoutOrder = -2, Name = "ToonLabel", Visible = cache.PToon, Text = `[{picked}]`, TextColor3 = pickedColor, TextStrokeColor3 = darkenColor(pickedColor) })
+		local Items: Frame =				Copy(StamFrame, billboardGui, { LayoutOrder = -3, Name = "Items", Visible = cache.PItems })
+		createInstance("UIListLayout", Items, { Padding = UDim.new(0.05, 0), FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center })
 		
-		local Hearts: Frame =				createInstance("Frame", billboardGui, { BackgroundTransparency = 1, LayoutOrder = -2, Name = "Hearts", Size = UDim2.fromScale(1, 1/4), Visible = cache.PHearts })
-		local heartsLayout: UIListLayout =	createInstance("UIListLayout", Hearts, { Padding = UDim.new(0, 10), FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center })
-		local Items: Frame =				Copy(Hearts, billboardGui, { LayoutOrder = -3, Name = "Items", Visible = cache.PItems })
-		
-		local h = 0
-		repeat h += 1
-			local Heart: ImageLabel =				createInstance("ImageLabel", Hearts, { AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, LayoutOrder = h, Name = `Heart{h}`, Size = UDim2.fromScale(1, 1), Image = images.Heart })
-			local UIARC: UIAspectRatioConstraint =	createInstance("UIAspectRatioConstraint", Heart, { AspectRatio = 1 })
-		until h == heart
+		Copy(contentPadding, StamFrame)
+		local stback: Frame =				createInstance("Frame", StamFrame, { AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = BrickColor.new("Medium stone grey").Color, BorderColor3 = BrickColor.new("Black").Color, BorderSizePixel = 1, Name = "Background", Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1) })
+		local stfill: Frame =				createInstance("Frame", stback, { BackgroundColor3 = Colors.WHITE, BorderSizePixel = 0, Name = "Fill", Size = UDim2.fromScale(1, 1) })
+		local stlabel: TextLabel =			createInstance("TextLabel", stback, { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), FontFace = Font.fromName("RobotoMono"), RichText = true, Text = "<b>?</b>/?", TextColor3 = Colors.BLACK, TextScaled = true })
 		
 		local i = 0
 		repeat i += 1
 			local Slot: ImageLabel =				createInstance("ImageLabel", Items, { AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, LayoutOrder = i, Name = `Slot{i}`, Size = UDim2.fromScale(1, 1) })
 			createInstance("UIAspectRatioConstraint", Slot, { AspectRatio = 1 })
-			createInstance("UIStroke", Slot, { ApplyStrokeMode = Enum.ApplyStrokeMode.Border, BrickColor = BrickColor.new("Black"), LineJoinMode = Enum.LineJoinMode.Miter, Transparency = 0.75 })
-			
+			createInstance("UIStroke", Slot, { ApplyStrokeMode = Enum.ApplyStrokeMode.Border, BorderStrokePosition = Enum.BorderStrokePosition.Inner, Color = BrickColor.new("Black").Color, LineJoinMode = Enum.LineJoinMode.Miter, Transparency = 0.75 })
 			local BackupText: TextLabel =	createInstance("TextLabel", Slot, { BackgroundTransparency = 1, Name = "BackupText", Size = UDim2.fromScale(1, 1), Visible = false, FontFace = Font.fromName("RobotoMono", Enum.FontWeight.Bold), Text = "", TextColor3 = Colors.WHITE, TextScaled = true, TextStrokeColor3 = Colors.BLACK, TextStrokeTransparency = 0 })
 			local Charges: TextLabel =		createInstance("TextLabel", Slot, { AnchorPoint = Vector2.new(0, 1), BackgroundTransparency = 1, Name = "Charges", Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, 0.4), Visible = false, FontFace = Font.fromName("RobotoMono", Enum.FontWeight.Bold), Text = "3/3", TextColor3 = Colors.WHITE, TextScaled = true, TextStrokeColor3 = Colors.BLACK, TextStrokeTransparency = 0 })
 			
@@ -417,31 +419,22 @@ local function PlayerHighlight(parent: Instance, name: string, heart: number, sl
 				Charges.Visible = false
 			end
 		until i == 3
+		
+		table.insert(STAM_CONNECTIONS, CurrentStamina.Changed:Connect(function(stam: number)
+			local alpha = math.clamp(stam / Stamina.Value, 0, 1)
+			stfill.BackgroundColor3 = stam <= 10 and Colors.RED or Colors.WHITE
+			stfill.Size = UDim2.fromScale(alpha, 1)
+			stlabel.Text = `<b>{stam}</b>/{Stamina.Value}`
+		end))
 	else
-		local Hearts = billboardGui:FindFirstChild("Hearts") :: Frame
+		local StamFrame = billboardGui:FindFirstChild("Stamina") :: Frame
 		local Items = billboardGui:FindFirstChild("Items") :: Frame
 		local TextLabel = billboardGui:FindFirstChild("TextLabel") :: TextLabel
 		local ToonLabel = billboardGui:FindFirstChild("ToonLabel") :: TextLabel
-		Hearts.Visible = cache.PHearts
+		StamFrame.Visible = cache.PStam
 		Items.Visible = cache.PItems
 		TextLabel.Visible = cache.PName
 		ToonLabel.Visible = cache.PToon
-		
-		if cache.PHearts then
-			local h = #Hearts:GetChildren() - 1
-			
-			if h < heart then
-				repeat h += 1
-					local Heart: ImageLabel =				createInstance("ImageLabel", Hearts, { AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, LayoutOrder = h, Name = `Heart{h}`, Size = UDim2.fromScale(1, 1), Image = images.Heart })
-					local UIARC: UIAspectRatioConstraint =	createInstance("UIAspectRatioConstraint", Heart, { AspectRatio = 1 })
-				until h == heart
-			elseif h > heart then
-				repeat h -= 1
-					local Heart = Hearts:FindFirstChild(`Heart{h + 1}`)
-					if Heart then Heart:Destroy() end
-				until h == heart
-			end
-		end
 	
 		if cache.PItems then
 			for _, s in Items:GetChildren() do
@@ -495,6 +488,7 @@ end
 
 local function destroy(target: string)
 	local folder = (target == "PLAYER" and InGamePlayers) or CurrentRoom:FindFirstChild(target, true)
+	if not folder then return end
 	for _, v in CollectionService:GetTagged(cache.TAG) do
 		if v:IsDescendantOf(folder) then
 			v:Destroy()
@@ -574,7 +568,7 @@ local function refresh(value: boolean?)
 								str = str:gsub("{p}", comp and "completed" or "incomplete")
 							end
 						end
-						if comp then col = Colors.RED end
+						if comp then col = Colors.GREEN end
 						if haunt then col = Colors.CYAN end
 						highlight(gen, col, str)
 					end
@@ -666,11 +660,6 @@ local function refresh(value: boolean?)
 			end
 		end
 		
-		local ichorScreen = Floor:FindFirstChild("IchorScreen")
-		if ichorScreen and ichorScreen:IsA("ScreenGui") then
-			ichorScreen.Enabled = not cache.Ichor
-		end
-		
 		if not cache.Monsters then destroy("Monsters") else
 			local folder = Floor:FindFirstChild("Monsters")
 			if folder then
@@ -709,54 +698,49 @@ local function refresh(value: boolean?)
 					waypoint.Transparency = cache.Waypoints and 0 or 1
 				end
 			end
+			
+			local ichorScreen = Floor:FindFirstChild("IchorScreen")
+			if ichorScreen and ichorScreen:IsA("ScreenGui") then
+				ichorScreen.Enabled = not cache.Ichor
+			end
 		end
-		
-		if not cache.PShow then destroy("PLAYER") else
-			for _, char in InGamePlayers:GetChildren() do
-				if char == character then continue end
-				local name = char.Name
-				local Health = char.Stats.Health
-				local Inventory = char.Inventory
-				local Slot1, Slot2, Slot3
-				
-				if cache.PItems then
-					for _, slot in Inventory:GetChildren() do
-						local i = tonumber(slot.Name:sub(-1))
-						if i == 1 then
-							Slot1 = slot
-						elseif i == 2 then
-							Slot2 = slot
-						else
-							Slot3 = slot
-						end
-						if slot.Value ~= "None" then
-							PlayerHighlight(char, char.Name, Health.Value, slot)
-						end
+	end
+	
+	if not cache.PShow then destroy("PLAYER") else
+		for _, char in InGamePlayers:GetChildren() do
+			if char == character then continue end
+			local name = char.Name
+			local Inventory = char.Inventory
+			local Slot1, Slot2, Slot3
+			
+			if cache.PItems then
+				for _, slot in Inventory:GetChildren() do
+					local i = tonumber(slot.Name:sub(-1))
+					if i == 1 then
+						Slot1 = slot
+					elseif i == 2 then
+						Slot2 = slot
+					else
+						Slot3 = slot
 					end
-					
-					table.insert(CHANGE_CONNECTIONS, Slot1.Changed:Connect(function()
-						PlayerHighlight(char, char.Name, Health.Value, Slot1)
-					end))
-					
-					table.insert(CHANGE_CONNECTIONS, Slot2.Changed:Connect(function()
-						PlayerHighlight(char, char.Name, Health.Value, Slot2)
-					end))
-					
-					table.insert(CHANGE_CONNECTIONS, Slot3.Changed:Connect(function()
-						PlayerHighlight(char, char.Name, Health.Value, Slot3)
-					end))
-				else
-					PlayerHighlight(char, char.Name, Health.Value)
+					if slot.Value ~= "None" then
+						PlayerHighlight(char, char.Name, slot)
+					end
 				end
 				
-				table.insert(CHANGE_CONNECTIONS, Health.Changed:Connect(function()
-					if cache.Hearts then
-						PlayerHighlight(char, char.Name, Health.Value)
-					end
+				table.insert(CHANGE_CONNECTIONS, Slot1.Changed:Connect(function()
+					PlayerHighlight(char, char.Name, Slot1)
 				end))
 				
-				PlayerHighlight(char, char.Name, Health.Value)
+				table.insert(CHANGE_CONNECTIONS, Slot2.Changed:Connect(function()
+					PlayerHighlight(char, char.Name, Slot2)
+				end))
+				
+				table.insert(CHANGE_CONNECTIONS, Slot3.Changed:Connect(function()
+					PlayerHighlight(char, char.Name, Slot3)
+				end))
 			end
+			PlayerHighlight(char, char.Name)
 		end
 	end
 	
@@ -835,7 +819,7 @@ do --> Initialize
 		["PShow"] =		{ index = 1, label = "Show Players"			},
 		["PName"] =		{ index = 2, label = "Show Names"			},
 		["PToon"] =		{ index = 3, label = "Show Toon's Name"		},
-		["PHearts"] =	{ index = 4, label = "Show Hearts"			},
+		["PStam"] =		{ index = 4, label = "Show Stamina"			},
 		["PItems"] =	{ index = 6, label = "Show Items"			},
 		["PLight"] =	{ index = 7, label = "Light on Blackout"	},
 		["PColor"] =	{ index = 8, label = "Toon Color Coded", enabled = true },
@@ -1025,6 +1009,12 @@ miniToggle.MouseButton1Down:Connect(function()
 			setnil(CONNECTIONS)
 			for _, v in CollectionService:GetTagged(cache.TAG) do
 				v:Destroy()
+			end
+			for _, CONN in CHANGE_CONNECTIONS do
+				CONN:Disconnect()
+			end
+			for _, CONN in STAM_CONNECTIONS do
+				CONN:Disconnect()
 			end
 			RBXGeneral:DisplaySystemMessage('<font color="#000000"><stroke color="#FFFFFF">I.C.H.O.R. BROKEN</stroke></font>')
 			gui:Destroy()
